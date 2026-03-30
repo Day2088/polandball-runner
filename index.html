@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
+<title>波兰球跑酷 | Polandball Runner</title>
+
+<!-- ========== 微信 / QQ / 社交平台分享卡片 Open Graph 标签 ========== -->
+<!-- 重要：部署后将下面的 URL 和图片地址替换为你的真实托管地址 -->
+<meta property="og:title"       content="波兰球跑酷 — 来挑战我的分数！">
+<meta property="og:description" content="一个超好玩的无尽跑酷小游戏，快来试试你能跑多远！">
+<meta property="og:image"       content="share-thumb.png">
+<meta property="og:url"         content="">
+<meta property="og:type"        content="website">
+<meta name="description"        content="波兰球跑酷 — 一个超好玩的无尽跑酷小游戏">
+<meta itemprop="name"           content="波兰球跑酷">
+<meta itemprop="image"          content="share-thumb.png">
+
+<!-- ========== 移动端 Web App + 微信 X5 内核适配 ========== -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="x5-fullscreen" content="true">
+<meta name="x5-page-mode" content="app">
+<meta name="x5-orientation" content="portrait">
+
+<style>
+/* ========== 全局样式重置 ========== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue',
+               'Microsoft YaHei', sans-serif;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#gameCanvas {
+  display: block; width: 100%; height: 100%;
+  image-rendering: pixelated;
+  position: fixed; inset: 0;
+}
+
+/* ========== 遮罩层 ========== */
+.overlay {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 100; padding: 20px;
+}
+.overlay.hidden { display: none; }
+
+/* ========== 主菜单 ========== */
+#menuOverlay {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+.menu-title {
+  font-size: clamp(28px, 7vw, 56px);
+  font-weight: 900; color: #fff;
+  text-shadow: 0 0 30px rgba(255,80,80,0.5), 0 0 60px rgba(255,80,80,0.2);
+  margin-bottom: 6px; letter-spacing: 2px;
+}
+.menu-subtitle {
+  font-size: clamp(11px, 2.8vw, 16px);
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 24px; letter-spacing: 4px;
+  text-transform: uppercase;
+}
+.menu-best {
+  font-size: clamp(13px, 3.2vw, 18px);
+  color: rgba(255,255,255,0.6); margin-bottom: 20px;
+}
+.menu-best span { color: #ffd700; font-weight: 700; }
+
+/* ========== 按钮 ========== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 36px; border: none; border-radius: 50px;
+  font-size: clamp(14px, 3.5vw, 18px); font-weight: 700; cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+.btn:active { transform: scale(0.95); }
+.btn-primary {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: #fff; box-shadow: 0 6px 24px rgba(231,76,60,0.4);
+}
+.btn-green {
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
+  color: #fff; box-shadow: 0 6px 24px rgba(7,193,96,0.4);
+}
+.btn-secondary {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.85);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 10px 24px; font-size: clamp(12px, 3vw, 15px);
+}
+.btn-secondary:active { background: rgba(255,255,255,0.2); }
+.menu-buttons { display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; max-width: 280px; }
+.menu-buttons .btn { width: 100%; }
+
+/* ========== 游戏结束 ========== */
+#gameOverOverlay {
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.go-title { font-size: clamp(24px, 6vw, 44px); font-weight: 900; color: #e74c3c; margin-bottom: 10px; }
+.go-score { font-size: clamp(16px, 4vw, 24px); color: #fff; margin-bottom: 4px; }
+.go-score span { color: #ffd700; font-weight: 700; }
+.go-best { font-size: clamp(13px, 3.2vw, 18px); color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+.go-best span { color: #ffd700; }
+.go-new { color: #2ecc71; font-weight: 700; font-size: clamp(14px, 3.5vw, 18px); margin-bottom: 16px; }
+
+/* ========== 皮肤预览 ========== */
+.skin-preview {
+  width: 76px; height: 76px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.3);
+  margin-bottom: 14px; overflow: hidden; background: #222;
+}
+.skin-preview canvas { width: 100%; height: 100%; }
+
+/* ========== 微信分享引导弹窗 ========== */
+#shareGuide {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 9999;
+  display: flex; flex-direction: column;
+  align-items: flex-end;
+  padding: 16px 24px;
+  cursor: pointer;
+}
+#shareGuide.hidden { display: none; }
+.share-arrow {
+  width: 55px; height: 70px;
+  margin-right: 6px;
+  animation: bounceArrow 1s ease-in-out infinite;
+}
+.share-text {
+  color: #fff; font-size: clamp(16px, 4.2vw, 22px);
+  font-weight: 700; text-align: center;
+  margin-top: 32px; width: 100%; line-height: 1.8;
+}
+.share-text-small {
+  color: rgba(255,255,255,0.45); font-size: clamp(12px, 3vw, 14px);
+  text-align: center; width: 100%; margin-top: 20px;
+}
+@keyframes bounceArrow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+/* ========== 非微信的分享面板 ========== */
+#shareFallback {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 30px;
+}
+#shareFallback.hidden { display: none; }
+.share-card {
+  background: #1e2a3a; border-radius: 16px;
+  padding: 28px 24px; max-width: 320px; width: 100%;
+  text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.share-card-title { color: #fff; font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+.share-card-score { color: #ffd700; font-size: 32px; font-weight: 900; margin-bottom: 6px; }
+.share-card-desc { color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 20px; }
+.share-card-url {
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px; padding: 10px 14px; color: rgba(255,255,255,0.7);
+  font-size: 12px; word-break: break-all; margin-bottom: 16px; line-height: 1.5;
+}
+.share-actions { display: flex; gap: 10px; }
+.share-actions .btn { flex: 1; padding: 12px 10px; font-size: 14px; }
+
+#skinUpload { display: none; }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<!-- ===== 主菜单 ===== -->
+<div id="menuOverlay" class="overlay">
+  <div class="skin-preview"><canvas id="skinPreviewCanvas" width="80" height="80"></canvas></div>
+  <div class="menu-title">波兰球跑酷</div>
+  <div class="menu-subtitle">Polandball Runner</div>
+  <div class="menu-best">最高分: <span id="menuBest">0</span></div>
+  <div class="menu-buttons">
+    <button class="btn btn-primary" id="btnStart">▶ 开始游戏</button>
+    <button class="btn btn-secondary" id="btnSkin">🎨 更换皮肤 / 上传图片</button>
+    <button class="btn btn-green" id="btnShareMenu">📤 分享给好友</button>
+  </div>
+  <input type="file" id="skinUpload" accept="image/*">
+</div>
+
+<!-- ===== 游戏结束 ===== -->
+<div id="gameOverOverlay" class="overlay hidden">
+  <div class="go-title">游戏结束</div>
+  <div class="go-score">得分: <span id="goScore">0</span></div>
+  <div class="go-best">最高分: <span id="goBest">0</span></div>
+  <div class="go-new" id="goNew" style="display:none">🎉 新纪录！</div>
+  <div class="menu-buttons">
+    <button class="btn btn-primary" id="btnRestart">🔄 再来一次</button>
+    <button class="btn btn-green" id="btnShareScore">📤 晒分数给好友</button>
+    <button class="btn btn-secondary" id="btnMenu">🏠 返回主菜单</button>
+  </div>
+</div>
+
+<!-- ===== 微信内分享引导 ===== -->
+<div id="shareGuide" class="hidden" onclick="this.classList.add('hidden')">
+  <div class="share-arrow">
+    <svg viewBox="0 0 60 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M30 70 L30 15" stroke="white" stroke-width="4" stroke-linecap="round"/>
+      <path d="M15 30 L30 12 L45 30" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="6" r="3.5" fill="white"/>
+      <circle cx="30" cy="6" r="3.5" fill="white"/>
+      <circle cx="48" cy="6" r="3.5" fill="white"/>
+    </svg>
+  </div>
+  <div class="share-text">
+    点击右上角 <strong>「 ··· 」</strong><br>
+    选择「发送给朋友」<br>或「分享到朋友圈」
+  </div>
+  <div class="share-text-small">点击任意位置关闭此提示</div>
+</div>
+
+<!-- ===== 非微信分享面板 ===== -->
+<div id="shareFallback" class="hidden">
+  <div class="share-card">
+    <div class="share-card-title">🏓 波兰球跑酷</div>
+    <div class="share-card-score" id="shareCardScore">0</div>
+    <div class="share-card-desc">我在波兰球跑酷拿到了这个分数，来挑战我吧！</div>
+    <div class="share-card-url" id="shareCardUrl"></div>
+    <div class="share-actions">
+      <button class="btn btn-green" id="btnCopyLink">📋 复制链接</button>
+      <button class="btn btn-secondary" id="btnCloseShare">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+//  波兰球跑酷 — 微信分享优化完整版
+// ================================================================
+(function() {
+"use strict";
+
+// ====================== 微信环境检测 ======================
+const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+const isQQ     = /\sQQ\//i.test(navigator.userAgent);
+const PAGE_URL = window.location.href;
+
+// ====================== 常量与配置 ======================
+const DESIGN_W = 800, DESIGN_H = 450;
+const GRAVITY = 1700, JUMP_VELOCITY = -780, GROUND_Y_RATIO = 0.82;
+const INITIAL_SPEED = 240, MAX_SPEED = 620, SPEED_INCREMENT = 0.2;
+const MIN_OBSTACLE_GAP = 0.85, MAX_OBSTACLE_GAP = 2.2;
+const BALL_RADIUS = 28, ENV_CHANGE_SCORE = 500;
+const DUST_COUNT = 8, DUST_LIFETIME = 0.4;
+
+// ====================== DOM 引用 ======================
+const canvas=document.getElementById('gameCanvas'), ctx=canvas.getContext('2d');
+const menuOverlay=document.getElementById('menuOverlay');
+const gameOverOverlay=document.getElementById('gameOverOverlay');
+const btnStart=document.getElementById('btnStart');
+const btnSkin=document.getElementById('btnSkin');
+const btnRestart=document.getElementById('btnRestart');
+const btnMenu=document.getElementById('btnMenu');
+const btnShareMenu=document.getElementById('btnShareMenu');
+const btnShareScore=document.getElementById('btnShareScore');
+const skinUpload=document.getElementById('skinUpload');
+const menuBestEl=document.getElementById('menuBest');
+const goScoreEl=document.getElementById('goScore');
+const goBestEl=document.getElementById('goBest');
+const goNewEl=document.getElementById('goNew');
+const skinPreviewCtx=document.getElementById('skinPreviewCanvas').getContext('2d');
+const shareGuide=document.getElementById('shareGuide');
+const shareFallback=document.getElementById('shareFallback');
+const shareCardScore=document.getElementById('shareCardScore');
+const shareCardUrl=document.getElementById('shareCardUrl');
+const btnCopyLink=document.getElementById('btnCopyLink');
+const btnCloseShare=document.getElementById('btnCloseShare');
+
+// ====================== 游戏状态 ======================
+let scale=1, canvasW=DESIGN_W, canvasH=DESIGN_H, groundY=DESIGN_H*GROUND_Y_RATIO;
+let gameState='menu', speed=INITIAL_SPEED, score=0;
+let bestScore=parseInt(localStorage.getItem('pb_runner_best')||'0',10);
+let isNewBest=false, lastTime=0, obstacles=[], obstacleTimer=1.5;
+let particles=[], shakeTimer=0, shakePower=0, envIndex=0;
+const ENVIRONMENTS=[
+  {name:'晴天',sky1:'#87CEEB',sky2:'#e0f0ff',groundC:'#c2a66b',groundD:'#a88c55',stars:false,rain:false},
+  {name:'黄昏',sky1:'#ff7e5f',sky2:'#feb47b',groundC:'#b8935a',groundD:'#9a7a48',stars:false,rain:false},
+  {name:'夜晚',sky1:'#0f0c29',sky2:'#1a1a40',groundC:'#3a3a5c',groundD:'#2a2a44',stars:true, rain:false},
+  {name:'雨天',sky1:'#4a5568',sky2:'#718096',groundC:'#8a7e6b',groundD:'#6e6454',stars:false,rain:true},
+];
+let currentEnv=ENVIRONMENTS[0], starPositions=[], raindrops=[], clouds=[];
+const player={x:0,y:0,vy:0,radius:BALL_RADIUS,isOnGround:true,rotation:0,skinImg:null};
+
+// ====================== 波兰球绘制 ======================
+function drawDefaultPolandball(c,cx,cy,r){
+  c.save();c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.closePath();c.clip();
+  c.fillStyle='#fff';c.fillRect(cx-r,cy-r,r*2,r);
+  c.fillStyle='#dc143c';c.fillRect(cx-r,cy,r*2,r);c.restore();
+  c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.strokeStyle='#222';c.lineWidth=2;c.stroke();
+  const ex=cx+r*0.25,ey=cy-r*0.15,er=r*0.18;
+  c.beginPath();c.arc(ex,ey,er,0,Math.PI*2);c.fillStyle='#fff';c.fill();
+  c.strokeStyle='#222';c.lineWidth=1.2;c.stroke();
+  c.beginPath();c.arc(ex+er*0.25,ey,er*0.45,0,Math.PI*2);c.fillStyle='#111';c.fill();
+}
+function drawCustomPolandball(c,cx,cy,r,img){
+  c.save();c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.closePath();c.clip();
+  const sz=r*2,ia=img.width/img.height;
+  let sw,sh,sx,sy;
+  if(ia>1){sh=img.height;sw=sh;sx=(img.width-sw)/2;sy=0;}
+  else{sw=img.width;sh=sw;sx=0;sy=(img.height-sh)/2;}
+  c.drawImage(img,sx,sy,sw,sh,cx-r,cy-r,sz,sz);c.restore();
+  c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.strokeStyle='#222';c.lineWidth=2.5;c.stroke();
+}
+
+// ====================== 障碍物 ======================
+class Obstacle{
+  constructor(type,x){
+    this.type=type;this.x=x;this.passed=false;
+    if(type==='cactus_s'){this.w=18;this.h=38;this.y=groundY-this.h;}
+    else if(type==='cactus_l'){this.w=26;this.h=52;this.y=groundY-this.h;}
+    else{this.w=40;this.h=28;
+      const hs=[groundY-40,groundY-80,groundY-120];
+      this.y=hs[Math.floor(Math.random()*hs.length)];this.wingPhase=Math.random()*Math.PI*2;}
+  }
+  update(dt){this.x-=speed*dt;if(this.type==='bird')this.wingPhase+=dt*8;}
+  draw(c){this.type==='bird'?this._drawBird(c):this._drawCactus(c);}
+  _drawCactus(c){
+    const{x,y,w,h}=this,dk=currentEnv.name==='夜晚';
+    const bc=dk?'#2d5a27':'#2d8a2e',dc=dk?'#1e4a1a':'#1e6a1e';
+    c.fillStyle=bc;roundRect(c,x+(w-w*0.45)/2,y,w*0.45,h,4);c.fill();
+    c.fillStyle=dc;
+    if(this.type==='cactus_l'){
+      roundRect(c,x,y+h*0.3,w*0.3,h*0.12,3);c.fill();
+      roundRect(c,x,y+h*0.22,w*0.12,h*0.2,3);c.fill();
+      roundRect(c,x+w*0.7,y+h*0.45,w*0.3,h*0.12,3);c.fill();
+      roundRect(c,x+w*0.88,y+h*0.32,w*0.12,h*0.25,3);c.fill();
+    }else{
+      roundRect(c,x,y+h*0.35,w*0.35,h*0.1,2);c.fill();
+      roundRect(c,x,y+h*0.25,w*0.13,h*0.2,2);c.fill();
+    }
+  }
+  _drawBird(c){
+    const cx=this.x+this.w/2,cy=this.y+this.h/2,wy=Math.sin(this.wingPhase)*10;
+    const dk=currentEnv.name==='夜晚';
+    c.fillStyle=dk?'#6a5a8a':'#7a6a5a';
+    c.beginPath();c.ellipse(cx,cy,this.w*0.38,this.h*0.28,0,0,Math.PI*2);c.fill();
+    c.fillStyle=dk?'#8a7aaa':'#9a8a6a';
+    c.beginPath();c.moveTo(cx-6,cy);c.lineTo(cx-this.w*0.5,cy+wy-12);c.lineTo(cx-2,cy+2);c.closePath();c.fill();
+    c.beginPath();c.moveTo(cx+6,cy);c.lineTo(cx+this.w*0.5,cy+wy-12);c.lineTo(cx+2,cy+2);c.closePath();c.fill();
+    c.fillStyle='#d4a030';c.beginPath();c.moveTo(cx+this.w*0.36,cy-2);
+    c.lineTo(cx+this.w*0.55,cy+2);c.lineTo(cx+this.w*0.36,cy+4);c.closePath();c.fill();
+    c.fillStyle='#fff';c.beginPath();c.arc(cx+this.w*0.18,cy-4,3,0,Math.PI*2);c.fill();
+    c.fillStyle='#111';c.beginPath();c.arc(cx+this.w*0.2,cy-4,1.5,0,Math.PI*2);c.fill();
+  }
+  collidesWith(px,py,pr){
+    const m=0.28,ox=this.x+this.w*m,oy=this.y+this.h*m,ow=this.w*(1-m*2),oh=this.h*(1-m*2);
+    const cx=Math.max(ox,Math.min(px,ox+ow)),cy=Math.max(oy,Math.min(py,oy+oh));
+    const dx=px-cx,dy=py-cy;return dx*dx+dy*dy<pr*pr;
+  }
+}
+
+// ====================== 粒子 ======================
+class Particle{
+  constructor(x,y,vx,vy,life,color,size){
+    this.x=x;this.y=y;this.vx=vx;this.vy=vy;
+    this.life=life;this.maxLife=life;this.color=color;this.size=size;
+  }
+  update(dt){this.x+=this.vx*dt;this.y+=this.vy*dt;this.vy+=400*dt;this.life-=dt;}
+  draw(c){
+    const a=Math.max(0,this.life/this.maxLife);
+    c.globalAlpha=a*0.7;c.fillStyle=this.color;
+    c.beginPath();c.arc(this.x,this.y,this.size*a,0,Math.PI*2);c.fill();c.globalAlpha=1;
+  }
+}
+function spawnDust(x,y){
+  const cl=currentEnv.name==='夜晚'?'#aaa':'#c2a66b';
+  for(let i=0;i<DUST_COUNT;i++)
+    particles.push(new Particle(x,y,(Math.random()-0.6)*120,-Math.random()*150-30,
+      DUST_LIFETIME+Math.random()*0.2,cl,Math.random()*4+2));
+}
+function spawnHitParticles(x,y){
+  const cs=['#e74c3c','#fff','#ffd700','#ff6b6b'];
+  for(let i=0;i<14;i++){const a=Math.random()*Math.PI*2,s=Math.random()*250+80;
+    particles.push(new Particle(x,y,Math.cos(a)*s,Math.sin(a)*s,0.5,
+      cs[Math.floor(Math.random()*cs.length)],Math.random()*4+2));}
+}
+
+// ====================== 环境系统 ======================
+function initStars(){starPositions=[];for(let i=0;i<80;i++)starPositions.push({x:Math.random()*DESIGN_W,y:Math.random()*DESIGN_H*0.6,r:Math.random()*1.5+0.5,twinkle:Math.random()*Math.PI*2});}
+function initRain(){raindrops=[];for(let i=0;i<100;i++)raindrops.push({x:Math.random()*DESIGN_W,y:Math.random()*DESIGN_H,speed:Math.random()*400+300,length:Math.random()*15+8});}
+function initClouds(){clouds=[];for(let i=0;i<5;i++)clouds.push({x:Math.random()*DESIGN_W,y:Math.random()*DESIGN_H*0.35+10,w:Math.random()*80+50,speed:Math.random()*20+10});}
+function updateEnvironment(){
+  const idx=Math.floor(score/ENV_CHANGE_SCORE)%ENVIRONMENTS.length;
+  if(idx!==envIndex){envIndex=idx;currentEnv=ENVIRONMENTS[envIndex];
+    if(currentEnv.stars)initStars();if(currentEnv.rain)initRain();}
+}
+
+// ====================== 背景绘制 ======================
+function drawBackground(c,dt){
+  const g=c.createLinearGradient(0,0,0,canvasH);
+  g.addColorStop(0,currentEnv.sky1);g.addColorStop(1,currentEnv.sky2);
+  c.fillStyle=g;c.fillRect(0,0,canvasW,canvasH);
+  if(currentEnv.stars){c.fillStyle='#fff';
+    for(const s of starPositions){s.twinkle+=dt*2.5;c.globalAlpha=0.5+Math.sin(s.twinkle)*0.4;
+      c.beginPath();c.arc(s.x,s.y,s.r,0,Math.PI*2);c.fill();}c.globalAlpha=1;
+    c.fillStyle='#f5f0c1';c.beginPath();c.arc(DESIGN_W*0.8,DESIGN_H*0.15,22,0,Math.PI*2);c.fill();
+    c.fillStyle=currentEnv.sky1;c.beginPath();c.arc(DESIGN_W*0.8+8,DESIGN_H*0.15-4,18,0,Math.PI*2);c.fill();}
+  if(!currentEnv.stars){c.globalAlpha=currentEnv.rain?0.5:0.35;c.fillStyle=currentEnv.rain?'#8a9aaa':'#fff';
+    for(const cl of clouds){cl.x-=cl.speed*dt;if(cl.x+cl.w<0){cl.x=DESIGN_W+20;cl.y=Math.random()*DESIGN_H*0.3+10;}drawCloud(c,cl.x,cl.y,cl.w);}c.globalAlpha=1;}
+  if(currentEnv.rain){c.strokeStyle='rgba(180,200,220,0.5)';c.lineWidth=1;
+    for(const r of raindrops){r.y+=r.speed*dt;r.x-=30*dt;if(r.y>DESIGN_H){r.y=-r.length;r.x=Math.random()*DESIGN_W;}
+      c.beginPath();c.moveTo(r.x,r.y);c.lineTo(r.x-2,r.y+r.length);c.stroke();}}
+  drawHills(c);
+  c.fillStyle=currentEnv.groundC;c.fillRect(0,groundY,DESIGN_W,DESIGN_H-groundY);
+  c.strokeStyle=currentEnv.groundD;c.lineWidth=2;c.beginPath();c.moveTo(0,groundY);c.lineTo(DESIGN_W,groundY);c.stroke();
+  c.fillStyle=currentEnv.groundD;const ds=Math.floor(score*0.5)%200;
+  for(let i=0;i<30;i++){c.fillRect((i*73+ds*17)%DESIGN_W,groundY+8+(i*37)%(DESIGN_H-groundY-16),2,1);}
+}
+function drawHills(c){
+  c.fillStyle=currentEnv.name==='夜晚'?'rgba(30,30,60,0.5)':'rgba(150,180,130,0.25)';
+  c.beginPath();c.moveTo(0,groundY);
+  for(let x=0;x<=DESIGN_W;x+=40)c.lineTo(x,groundY-Math.sin(x*0.008+1)*35-Math.sin(x*0.015)*20-10);
+  c.lineTo(DESIGN_W,groundY);c.closePath();c.fill();
+}
+function drawCloud(c,x,y,w){const h=w*0.4;c.beginPath();
+  c.arc(x+w*0.3,y+h*0.5,h*0.5,0,Math.PI*2);c.arc(x+w*0.55,y+h*0.3,h*0.55,0,Math.PI*2);
+  c.arc(x+w*0.75,y+h*0.5,h*0.42,0,Math.PI*2);c.fill();}
+function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);
+  c.quadraticCurveTo(x+w,y,x+w,y+r);c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();}
+
+// ====================== HUD ======================
+function drawHUD(c){
+  const st=Math.floor(score).toString().padStart(5,'0');
+  c.fillStyle='rgba(0,0,0,0.3)';roundRect(c,DESIGN_W-150,10,140,36,8);c.fill();
+  c.fillStyle='#fff';c.font='bold 20px "Courier New",monospace';c.textAlign='right';c.textBaseline='middle';
+  c.fillText(st,DESIGN_W-22,28);
+  c.font='12px sans-serif';c.fillStyle='rgba(255,255,255,0.5)';c.textAlign='left';c.fillText(currentEnv.name,12,22);
+}
+function updateSkinPreview(){const c=skinPreviewCtx;c.clearRect(0,0,80,80);
+  if(player.skinImg)drawCustomPolandball(c,40,40,36,player.skinImg);else drawDefaultPolandball(c,40,40,36);}
+
+// ====================== 游戏核心 ======================
+function resetGame(){
+  score=0;speed=INITIAL_SPEED;isNewBest=false;obstacles=[];particles=[];obstacleTimer=1.5;
+  shakeTimer=0;shakePower=0;envIndex=0;currentEnv=ENVIRONMENTS[0];
+  player.x=DESIGN_W*0.15;player.y=groundY-player.radius;player.vy=0;player.isOnGround=true;player.rotation=0;
+  initClouds();
+}
+function playerJump(){
+  if(player.isOnGround){player.vy=JUMP_VELOCITY;player.isOnGround=false;spawnDust(player.x,groundY);}
+}
+function spawnObstacle(){
+  const ts=['cactus_s','cactus_s','cactus_l','cactus_l','bird'];
+  const pool=score<400?ts.slice(0,4):ts;
+  obstacles.push(new Obstacle(pool[Math.floor(Math.random()*pool.length)],DESIGN_W+20));
+}
+function triggerShake(d,p){shakeTimer=d;shakePower=p;}
+function gameOver(){
+  gameState='over';spawnHitParticles(player.x,player.y);triggerShake(0.35,8);
+  if(score>bestScore){bestScore=Math.floor(score);localStorage.setItem('pb_runner_best',bestScore.toString());isNewBest=true;}
+  goScoreEl.textContent=Math.floor(score);goBestEl.textContent=bestScore;
+  goNewEl.style.display=isNewBest?'block':'none';
+  setTimeout(()=>gameOverOverlay.classList.remove('hidden'),500);
+}
+function update(dt){
+  if(gameState!=='playing')return;
+  speed=Math.min(MAX_SPEED,speed+SPEED_INCREMENT);
+  score+=speed*dt*0.018;updateEnvironment();
+  player.vy+=GRAVITY*dt;player.y+=player.vy*dt;
+  if(!player.isOnGround)player.rotation+=dt*4;else player.rotation*=0.85;
+  if(player.y>=groundY-player.radius){player.y=groundY-player.radius;player.vy=0;
+    if(!player.isOnGround)spawnDust(player.x,groundY);player.isOnGround=true;}
+  obstacleTimer-=dt;
+  if(obstacleTimer<=0){spawnObstacle();
+    obstacleTimer=(MIN_OBSTACLE_GAP+Math.random()*(MAX_OBSTACLE_GAP-MIN_OBSTACLE_GAP))*(INITIAL_SPEED/speed);}
+  for(let i=obstacles.length-1;i>=0;i--){const ob=obstacles[i];ob.update(dt);
+    if(ob.collidesWith(player.x,player.y,player.radius*0.58)){gameOver();return;}
+    if(!ob.passed&&ob.x+ob.w<player.x-player.radius)ob.passed=true;
+    if(ob.x+ob.w<-50)obstacles.splice(i,1);}
+  for(let i=particles.length-1;i>=0;i--){particles[i].update(dt);if(particles[i].life<=0)particles.splice(i,1);}
+  if(shakeTimer>0)shakeTimer-=dt;
+}
+function render(dt){
+  ctx.save();ctx.setTransform(scale,0,0,scale,0,0);
+  if(shakeTimer>0)ctx.translate((Math.random()-0.5)*shakePower*2,(Math.random()-0.5)*shakePower*2);
+  drawBackground(ctx,dt);
+  for(const ob of obstacles)ob.draw(ctx);
+  for(const p of particles)p.draw(ctx);
+  ctx.save();ctx.translate(player.x,player.y);ctx.rotate(player.rotation*0.1);
+  if(player.skinImg)drawCustomPolandball(ctx,0,0,player.radius,player.skinImg);
+  else drawDefaultPolandball(ctx,0,0,player.radius);ctx.restore();
+  if(gameState==='playing')drawHUD(ctx);ctx.restore();
+}
+function gameLoop(ts){
+  const dt=Math.min((ts-lastTime)/1000,0.05);lastTime=ts;
+  ctx.clearRect(0,0,canvas.width,canvas.height);update(dt);render(dt);requestAnimationFrame(gameLoop);
+}
+
+// ====================== 画布自适应 ======================
+function resize(){
+  const dpr=window.devicePixelRatio||1,w=window.innerWidth,h=window.innerHeight;
+  canvas.width=w*dpr;canvas.height=h*dpr;canvas.style.width=w+'px';canvas.style.height=h+'px';
+  scale=Math.min(w*dpr/DESIGN_W,h*dpr/DESIGN_H);canvasW=DESIGN_W;canvasH=DESIGN_H;groundY=DESIGN_H*GROUND_Y_RATIO;
+}
+
+// ====================== 输入事件 ======================
+function handlePress(e){e.preventDefault();if(gameState==='playing')playerJump();}
+canvas.addEventListener('touchstart',handlePress,{passive:false});
+canvas.addEventListener('mousedown',handlePress);
+document.addEventListener('keydown',(e)=>{
+  if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(gameState==='playing')playerJump();}
+});
+// 阻止微信浏览器下拉刷新 / 橡皮筋回弹
+document.addEventListener('touchmove',(e)=>{e.preventDefault();},{passive:false});
+
+// ====================== 分享功能 ======================
+function triggerShare(showScore){
+  const s=Math.floor(score);
+  if(isWeChat||isQQ){
+    // 微信/QQ内 → 显示右上角 "..." 引导箭头
+    shareGuide.classList.remove('hidden');
+  } else if(navigator.share){
+    // 支持 Web Share API 的浏览器（大部分移动浏览器）
+    navigator.share({
+      title:'波兰球跑酷',
+      text:showScore?`我在「波兰球跑酷」得了${s}分！来挑战我！`:'来玩一个超好玩的跑酷小游戏！',
+      url:PAGE_URL
+    }).catch(()=>{});
+  } else {
+    // 回退：复制链接面板
+    shareCardScore.textContent=showScore?s:bestScore;
+    shareCardUrl.textContent=PAGE_URL;
+    shareFallback.classList.remove('hidden');
+  }
+}
+btnCopyLink.addEventListener('click',()=>{
+  const t=`我在「波兰球跑酷」拿了${shareCardScore.textContent}分！来挑战：${PAGE_URL}`;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(()=>{btnCopyLink.textContent='✅ 已复制';
+      setTimeout(()=>{btnCopyLink.textContent='📋 复制链接';},2000);});
+  }else{
+    const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    btnCopyLink.textContent='✅ 已复制';setTimeout(()=>{btnCopyLink.textContent='📋 复制链接';},2000);
+  }
+});
+btnCloseShare.addEventListener('click',()=>shareFallback.classList.add('hidden'));
+
+// ====================== UI 按钮 ======================
+btnStart.addEventListener('click',()=>{menuOverlay.classList.add('hidden');resetGame();gameState='playing';});
+btnRestart.addEventListener('click',()=>{gameOverOverlay.classList.add('hidden');resetGame();gameState='playing';});
+btnMenu.addEventListener('click',()=>{
+  gameOverOverlay.classList.add('hidden');menuBestEl.textContent=bestScore;
+  updateSkinPreview();menuOverlay.classList.remove('hidden');gameState='menu';});
+btnSkin.addEventListener('click',()=>skinUpload.click());
+btnShareMenu.addEventListener('click',()=>triggerShare(false));
+btnShareScore.addEventListener('click',()=>triggerShare(true));
+skinUpload.addEventListener('change',(e)=>{
+  const f=e.target.files[0];if(!f)return;const reader=new FileReader();
+  reader.onload=(evt)=>{const img=new Image();
+    img.onload=()=>{player.skinImg=img;updateSkinPreview();};img.src=evt.target.result;};
+  reader.readAsDataURL(f);skinUpload.value='';
+});
+
+// ====================== 初始化 ======================
+function init(){
+  resize();window.addEventListener('resize',resize);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)resize();});
+  window.addEventListener('pageshow',resize);
+  menuBestEl.textContent=bestScore;updateSkinPreview();
+  resetGame();gameState='menu';lastTime=performance.now();requestAnimationFrame(gameLoop);
+}
+init();
+})();
+</script>
+</body>
+</html>
